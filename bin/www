@@ -1,0 +1,209 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('iot-practice:server');
+var http = require('http');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+
+//Connect to MongoDB
+var mongoDB = require("mongodb").MongoClient;
+var url = "mongodb://localhost:27017";
+var db_obj = null;
+mongoDB.connect(url, function(err,db){
+  db_obj = db;
+  console.log("MongoDB Connected.");
+});
+
+/**
+ *  Create MQTT client
+ */
+var mqtt = require('mqtt');
+const { stringify } = require('querystring');
+var mqtt_client = mqtt.connect("mqtt://127.0.0.1");
+
+
+mqtt_client.on("connect",function(){
+    mqtt_client.subscribe("23");
+    console.log("23bus");
+    mqtt_client.subscribe("1-4");
+    console.log("1-4bus");
+    mqtt_client.subscribe("93");
+    console.log("93bus");
+    mqtt_client.subscribe("30");
+    console.log("30bus");
+  })
+
+mqtt_client.on("message",function(topic, message){
+  console.log(topic+":"+message.toString());
+  var obj=JSON.parse(message);
+  obj.creat_at = new Date();
+  console.log(obj);
+
+  if(topic == "23"){
+  var coursor = db_obj.db("Project").collection("23");
+  coursor.insertOne(obj, function(err, result){
+    if(err)
+      console.log(err);
+    else
+      console.log(JSON.stringify(result));
+  });
+  }
+  else if (topic == "1-4"){ 
+    var cursor = db_obj.db("Project").collection("1-4");
+    cursor.insertOne(obj, function(err, result){
+      if(err){console.log(err);}
+      else{
+        console.log(JSON.stringify(result));}
+    });
+  }
+  else if (topic == "30"){ 
+    var cursor = db_obj.db("Project").collection("30");
+    cursor.insertOne(obj, function(err, result){
+      if(err){console.log(err);}
+      else{console.log(JSON.stringify(result));}
+    });
+  }
+  else if (topic == "93"){ 
+    var cursor = db_obj.db("Project").collection("93");
+    cursor.insertOne(obj, function(err, result){
+      if(err){console.log(err);}
+      else{console.log(JSON.stringify(result));}
+    });
+  }
+});
+
+var io = require("socket.io")(server);
+io.on("connection", function(socket){
+  socket.on("socket_evt_update", function(data){
+    var cursor = db_obj.db("Project").collection("23");
+    var options = {
+      sort: {"_id": -1},
+      projection: {_id: 0, busNo: 1, locationNo1: 1, predictTime1: 1, creat_at: 1},
+    };
+    var sending_data =cursor.find({},options).limit(1);
+    sending_data.toArray(function(err,results){
+      if(!err){
+        socket.emit("socket_up_23", JSON.stringify(results[0]));
+      }
+    });
+    var cursor = db_obj.db("Project").collection("1-4");
+    var options = {
+      sort:{"_id":-1},
+      projection: {_id: 0, busNo: 1, locationNo1: 1, predictTime1: 1, creat_at: 1},
+    };
+    var sending_data =cursor.find({},options).limit(1);
+    sending_data.toArray(function(err,results){
+      if(!err){
+        socket.emit("socket_up_1-4", JSON.stringify(results[0]));
+      }
+    }); 
+    var cursor = db_obj.db("Project").collection("30");
+    var options = {
+      sort:{"_id":-1},
+      projection: {_id: 0, busNo: 1, locationNo1: 1, predictTime1: 1, creat_at: 1},
+    };
+    var sending_data =cursor.find({},options).limit(1);
+    sending_data.toArray(function(err,results){
+      if(!err){
+        socket.emit("socket_up_30", JSON.stringify(results[0]));
+      }
+    });
+    var cursor = db_obj.db("Project").collection("93");
+    var options = {
+      sort:{"_id":-1},
+      projection: {_id: 0, busNo: 1, locationNo1: 1, predictTime1: 1, creat_at: 1},
+    };
+    var sending_data =cursor.find({},options).limit(1);
+    sending_data.toArray(function(err,results){
+      if(!err){
+        socket.emit("socket_up_93", JSON.stringify(results[0]));
+      }
+  });
+  });
+});
+
+
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}

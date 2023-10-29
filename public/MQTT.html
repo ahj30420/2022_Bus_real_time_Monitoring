@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<meta charset="UTF-8">
+<title>MQTT Monitoring Service</title>
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script>
+    var socket = io.connect();
+    var timer = null;
+    $(document).ready(function(){
+        socket.on("socket_up_23",function(data){
+            data = JSON.parse(data);
+            $(".mqttlist_23").html('<li>'+"버스번호 : "+data.busNo+ "번 / 현재 버스위치(몇번째 전 정류소) : "+data.locationNo1 + ", 버스도착예정시간(몇 분후 도착) : "+data.predictTime1 + "분"+'</li>');
+        });
+        socket.on("socket_up_1-4",function(data){
+            data = JSON.parse(data);
+            $(".mqttlist_1-4").html('<li>'+"버스번호 : "+data.busNo+ "번 / 현재 버스위치(몇번째 전 정류소) : "+data.locationNo1 + " / 버스도착예정시간(몇 분후 도착) : "+data.predictTime1 + "분"+'</li>');
+        });
+        socket.on("socket_up_93",function(data){
+            data = JSON.parse(data);
+            $(".mqttlist_93").html('<li>'+"버스번호 : "+data.busNo+ "번 / 현재 버스위치(몇번째 전 정류소) : "+data.locationNo1 + " / 버스도착예정시간(몇 분후 도착) : "+data.predictTime1 + "분"+'</li>');
+        });
+        socket.on("socket_up_30",function(data){
+            data = JSON.parse(data);
+            $(".mqttlist_30").html('<li>'+"버스번호 : "+data.busNo+ "번 / 현재 버스위치(몇번째 전 정류소) : "+data.locationNo1 + " / 버스도착예정시간(몇 분후 도착) : "+data.predictTime1 + "분"+'</li>');
+        });
+
+        if(timer==null){
+            timer = window.setInterval("timer1()", 3000); 
+        }
+    });
+    function timer1(){
+        socket.emit("socket_evt_update",JSON.stringify({}));
+    }
+    </script>
+    </head>
+    <body>
+     BusInformation_Monitoring
+        <div id = "msg">
+            <div id = "mqtt_logs">
+                <ul class="mqttlist_23"></ul>
+                <ul class="mqttlist_1-4"></ul>
+                <ul class="mqttlist_93"></ul>
+                <ul class="mqttlist_30"></ul>
+            </div>
+        </div>
+    </body>
+    </html>
